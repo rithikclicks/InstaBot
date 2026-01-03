@@ -157,8 +157,10 @@ def login():
     global cl
     username = request.form.get('username')
     password = request.form.get('password')
+    sessionid = request.form.get('sessionid') # [NEW]
 
-    if not username or not password:
+    # Validation: Need either (user+pass) OR (sessionid)
+    if not sessionid and (not username or not password):
         return jsonify({'status': 'error', 'message': 'Missing credentials'}), 400
 
     # Load session if exists
@@ -177,7 +179,12 @@ def login():
             # instagrapi login() usually handles this.
             pass
 
-        cl.login(username, password)
+        if sessionid:
+            log_activity(f"Attempting login with Session ID: {sessionid[:10]}...")
+            cl.login_by_sessionid(sessionid)
+        else:
+            cl.login(username, password)
+            
         cl.dump_settings('session.json')
         
         info = cl.user_info(cl.user_id)
