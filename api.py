@@ -194,7 +194,11 @@ def login():
     except Exception as e:
         error_msg = str(e)
         if "feedback_required" in error_msg or "blacklist" in error_msg:
-             return jsonify({'status': 'error', 'message': 'IP Blacklisted using this network. Toggle Airplane Mode (ON/OFF) to change IP and try again.'}), 401
+             return jsonify({'status': 'error', 'message': 'IP Blacklisted. Toggle Airplane Mode (ON/OFF) to change IP.'}), 401
+        
+        if "password" in error_msg.lower():
+            return jsonify({'status': 'error', 'message': 'Incorrect Password OR Suspicious Login Block. 1. Check password. 2. Open Instagram App -> Settings -> Security -> Login Activity -> "This Was Me".'}), 401
+            
         return jsonify({'status': 'error', 'message': error_msg}), 401
 
 @app.route('/start_task', methods=['POST'])
