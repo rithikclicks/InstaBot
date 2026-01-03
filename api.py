@@ -5,6 +5,8 @@ import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from instagrapi import Client
+from instagrapi.exceptions import TwoFactorRequired, ChallengeRequired
+import os
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -155,9 +157,25 @@ def login():
     if not username or not password:
         return jsonify({'status': 'error', 'message': 'Missing credentials'}), 400
 
+    # Load session if exists
     try:
         cl = Client()
+        if os.path.exists('session.json'):
+            cl.load_settings('session.json')
+            log_activity("Loaded saved session.")
+    except Exception as e:
+        log_activity(f"Session load error: {e}")
+
+    try:
+        # Check if already logged in (valid session)
+        if cl.user_id: 
+            # mild check, or just re-login if provided creds match?
+            # instagrapi login() usually handles this.
+            pass
+
         cl.login(username, password)
+        cl.dump_settings('session.json')
+        
         info = cl.user_info(cl.user_id)
         
         return jsonify({
@@ -165,8 +183,15 @@ def login():
             'username': info.username,
             'profile_pic_url': str(info.profile_pic_url)
         })
+    except TwoFactorRequired:
+        return jsonify({'status': 'error', 'message': '2FA Required! Please disable 2FA temporarily or check logs.'}), 401
+    except ChallengeRequired:
+        return jsonify({'status': 'error', 'message': 'Challenge Required! Please login via official app first.'}), 401
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 401
+        error_msg = str(e)
+        if "feedback_required" in error_msg or "blacklist" in error_msg:
+             return jsonify({'status': 'error', 'message': 'IP Blacklisted using this network. Toggle Airplane Mode (ON/OFF) to change IP and try again.'}), 401
+        return jsonify({'status': 'error', 'message': error_msg}), 401
 
 @app.route('/start_task', methods=['POST'])
 def start_task():
