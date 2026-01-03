@@ -148,6 +148,10 @@ def task_story_watcher(delay):
 
 # --- Routes ---
 
+@app.route('/', methods=['GET'])
+def home():
+    return "InstaBot Hybrid Backend is Running! 🚀"
+
 @app.route('/login', methods=['POST'])
 def login():
     global cl
